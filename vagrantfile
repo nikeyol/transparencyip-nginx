@@ -1,0 +1,53 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.box_check_update = false
+  config.vm.provider 'virtualbox' do |vb|
+   vb.customize [ "guestproperty", "set", :id, "/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold", 1000 ]
+  end
+  config.vm.synced_folder ".", "/vagrant", type: "rsync"
+  $instances = 4
+  (1..$instances).each do |i|
+    config.vm.define "NIM#{i}" do |node|
+      node.vm.box = "centos/7"
+      node.vm.hostname = "NIM#{i}"
+      if i == 1
+        ip = "172.17.8.101"
+        node.vm.network "private_network", ip: ip
+        node.vm.provider "virtualbox" do |vb|
+          vb.memory = "1024"
+          vb.cpus = 1
+          vb.name = "client"
+        end
+      elsif i == 3
+         ip  = "172.17.10.103"
+         node.vm.network "private_network", ip: ip
+         node.vm.provider "virtualbox" do |vb|
+           vb.memory = "1024"
+           vb.cpus = 1
+           vb.name = "NAT Server"
+         end
+      elsif i == 2 
+        ip = "172.17.10.102"
+        ip1 = "172.17.8.102"
+        node.vm.network "private_network", ip: ip
+        node.vm.network "private_network", ip: ip1
+        node.vm.provider "virtualbox" do |vb|
+          vb.memory = "1024"
+          vb.cpus = 1
+          vb.name = "proxy"
+        end
+      else
+        ip = "172.17.10.104"
+        node.vm.network "private_network", ip: ip
+        node.vm.provider "virtualbox" do |vb|
+          vb.memory = "1024"
+          vb.cpus = 1
+          vb.name = "server"
+        end   
+      end
+      node.vm.provision "shell", path: "install.sh", args: [i, ip]
+    end
+  end
+end
